@@ -1,3 +1,6 @@
+# Usage: python -m /path/to/file.py
+# link: http://localhost:8501 or http://[hostIP]:8501
+
 import streamlit as st
 import numpy as np
 import time
@@ -35,6 +38,7 @@ if uploaded_file:
     lines_per_block = 10
     num_blocks = (height + lines_per_block - 1) // lines_per_block
 
+    # Change the expected send time here
     target_time_no_ncc = 5.0
     target_time_ncc = 0.5
     
@@ -81,4 +85,5 @@ if uploaded_file:
                 if y_pos_ncc >= height and not ncc_finished:
                     ncc_time = time.time() - start_time
                     ncc_finished = True
+
                     st.write(f"NCC ON completed in: {ncc_time:.3f} seconds")
