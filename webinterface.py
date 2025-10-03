@@ -1,4 +1,4 @@
-# Usage: python -m /path/to/file.py
+# Usage: python -m streamlit /path/to/file.py
 # link: http://localhost:8501 or http://[hostIP]:8501
 
 import streamlit as st
@@ -87,3 +87,4 @@ if uploaded_file:
                     ncc_finished = True
 
                     st.write(f"NCC ON completed in: {ncc_time:.3f} seconds")
+
