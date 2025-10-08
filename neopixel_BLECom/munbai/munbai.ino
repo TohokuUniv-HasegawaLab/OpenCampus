@@ -7,7 +7,7 @@
 #define RX_LED_PIN  2   // 受信インジケータ用。基板に合わせて変更可（無ければ外す）
 
 // ==== BLE設定 ====
-static const char* DEVICE_NAME  = "SENDAI";
+static const char* DEVICE_NAME  = "M→L";
 static const char* SERVICE_UUID = "e44b9ddb-630f-9052-9f2c-1b764b52ce72";
 static const char* CHAR_UUID    = "ebe9db63-5705-8280-37d5-808d4f5a35fb";
 
@@ -97,32 +97,13 @@ void blinkAll(uint8_t r, uint8_t g, uint8_t b, uint16_t duration_ms, uint16_t pe
 void chase(uint8_t r, uint8_t g, uint8_t b, uint16_t duration_ms, uint16_t step_delay_ms, uint8_t routeid) {
   unsigned long t0 = millis();
   int pos = 0;
-  if (routeid==1){
   while ((millis() - t0) < duration_ms) {
-    ledsOff();
-    strip.setPixelColor(pos, strip.Color(r, g, b));
-    if (pos>10) strip.setPixelColor(pos, strip.Color(255, 0, 0));
-    strip.show();
-    pos = (pos + 1) % NUM_LEDS;
-    delay(step_delay_ms);
-  }}
-  else if (routeid==2){
-  while ((millis() - t0) < duration_ms) {
-    ledsOff();
-    strip.setPixelColor(pos, strip.Color(r, g, b));
-    if (pos>45) strip.setPixelColor(pos, strip.Color(0, 255, 0));
-    strip.show();
-    pos = (pos + 1) % NUM_LEDS;
-    delay(step_delay_ms);
-  }}
-  else{
-    while ((millis() - t0) < duration_ms) {
-    ledsOff();
-    strip.setPixelColor(pos, strip.Color(r, g, b));
-    strip.show();
-    pos = (pos + 1) % NUM_LEDS;
-    delay(step_delay_ms);
-  }}
+  ledsOff();
+  strip.setPixelColor(pos, strip.Color(r, g, b));
+  strip.show();
+  pos = (pos + 1) % NUM_LEDS;
+  delay(step_delay_ms);
+  }
   ledsOff();
 }
 
@@ -210,7 +191,7 @@ void loop() {
 
     if      (cmd == 0x01) solidColor(r, g, b, dur);
     else if (cmd == 0x02) blinkAll  (r, g, b, dur, px);
-    else if (cmd == 0x03) chase     (r, g, b, dur, px, RouteId);
+    else if (cmd == 0x03) chase     (r=255, g=255, b=255, dur, px, RouteId);
 
     // ---- 任意：処理後に自動切断したい場合は有効化 ----
     // NimBLEServer* srv = NimBLEDevice::getServer();
