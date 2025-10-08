@@ -198,9 +198,9 @@ final class BLEVM: NSObject, ObservableObject, CBCentralManagerDelegate, CBPerip
     // 4ルート（必要に応じて数値は現場で微調整）
     let ROUTE_TABLE: [String: RouteParam] = [
         "SENDAI→LONDON":             .init(duration: 15000, px: 20, kind: .sendai(routeId: 0)),
-        "SENDAI→SEOUL→LONDON":       .init(duration: 8000, px: 5, kind: .sendai(routeId: 1)),
-        "SENDAI→FRANKFURT→LONDON":   .init(duration: 8000, px: 5, kind: .sendai(routeId: 2)),
-        "TOKYO→MUMBAI→LONDON":       .init(duration: 10000, px: 20, kind: .tokyoMumbaiLondon)
+        "SENDAI→SEOUL→LONDON":       .init(duration: 8000, px: 7, kind: .sendai(routeId: 1)),
+        "SENDAI→FRANKFURT→LONDON":   .init(duration: 8000, px: 7, kind: .sendai(routeId: 2)),
+        "TOKYO→MUMBAI→LONDON":       .init(duration: 5000, px: 5, kind: .tokyoMumbaiLondon)
     ]
 
     var ROUTE_NAMES: [String] { Array(ROUTE_TABLE.keys).sorted() }
@@ -222,8 +222,8 @@ final class BLEVM: NSObject, ObservableObject, CBCentralManagerDelegate, CBPerip
         case .tokyoMumbaiLondon:
             // 前半：TOKYO→MUMBAI、後半：MUMBAI→LONDON（両方に送る）
             let segs: [(name: String, dur: UInt16, px: UInt16)] = [
-                ("TOKYO→MUMBAI",  rp.duration/2, rp.px),
-                ("MUMBAI→LONDON", rp.duration/2, rp.px)
+                ("T→M",  rp.duration, rp.px),
+                ("M→L", rp.duration, rp.px)
             ]
             var acc: UInt16 = 0
             func sendNext(_ idx: Int) {
@@ -232,13 +232,12 @@ final class BLEVM: NSObject, ObservableObject, CBCentralManagerDelegate, CBPerip
                 guard let p = self.peripheral(named: seg.name) else { self.log("Peripheral not found: \(seg.name)"); sendNext(idx+1); return }
                 self.ensureReady(p) { ok in
                     guard ok, let ch = self.chars[p.identifier] else { self.log("Not Ready: \(seg.name)"); sendNext(idx+1); return }
-                    // routeId=0（無視される）で送る
                     let pl = self.payloadChase(duration: seg.dur, px: seg.px, offset: acc, routeId: 0)
                     self.log("Send \(seg.name): dur=\(seg.dur) px=\(seg.px) off=\(acc)")
-                    p.writeValue(pl, for: ch, type: .withoutResponse)
-                    acc &+= seg.dur
+                    p.writeValue(pl, for: ch, type: .withResponse)
+                    acc += 1000
                     // 少し間を空けて次へ
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { sendNext(idx+1) }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { sendNext(idx+1) }
                 }
             }
             sendNext(0)
