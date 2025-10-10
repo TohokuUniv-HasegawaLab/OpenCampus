@@ -1,93 +1,3 @@
-# # link: http://localhost:8501 or http://[hostIP]:8501
-# import streamlit as st
-# import numpy as np
-# import os
-# import time
-# import random
-# from PIL import Image
-
-# st.set_page_config(page_title="Block Image Send Simulator", layout="wide")
-
-# uploaded_file = r"C:\Users\hasegawa-lab\Desktop\OpenCampas\picture\photo_send.jpg"
-
-# if uploaded_file:
-#     image = Image.open(uploaded_file).convert("RGB")
-
-#     max_height = 800
-#     scale_ratio = min(max_height / image.height, 1.0)
-#     new_width = int(image.width * scale_ratio)
-#     new_height = int(image.height * scale_ratio)
-#     image_resized = image.resize((new_width, new_height))
-#     image_np = np.array(image_resized)
-
-#     st.image(image_resized, caption="Original Resized Image", use_container_width=False)
-
-#     height, width, _ = image_np.shape
-#     col1, col2 = st.columns(2)
-#     canvas_no_ncc = np.zeros_like(image_np)
-#     canvas_ncc = np.zeros_like(image_np)
-
-#     placeholder_no_ncc = col1.empty()
-#     placeholder_ncc = col2.empty()
-
-#     col1.subheader("NCC OFF")
-#     col2.subheader("NCC ON")
-
-#     lines_per_block = 10
-#     num_blocks = (height + lines_per_block - 1) // lines_per_block
-
-#     # Change the expected send time here
-#     target_time_no_ncc = 10
-#     target_time_ncc = 0.5
-    
-#     speed_ratio = int(target_time_no_ncc / target_time_ncc)
-#     lines_per_update_ncc = lines_per_block * speed_ratio
-#     lines_per_update_no_ncc = lines_per_block
-
-#     #if st.button("Send Image (Compare NCC)"):
-#     time.sleep(2)
-
-#     start_time = time.time()
-#     last_time_no_ncc = start_time
-#     last_time_ncc = start_time
-    
-#     y_pos_ncc = 0
-#     y_pos_no_ncc = 0
-#     ncc_finished = False
-#     no_ncc_finished = False
-
-#     while y_pos_ncc < height or y_pos_no_ncc < height:
-#         current_time = time.time()
-
-#         # --- NCC OFF (Slower) ---
-#         if y_pos_no_ncc < height:
-#             y_end_no_ncc = min(y_pos_no_ncc + lines_per_update_no_ncc, height)
-#             canvas_no_ncc[y_pos_no_ncc:y_end_no_ncc, :] = image_np[y_pos_no_ncc:y_end_no_ncc, :]
-#             placeholder_no_ncc.image(Image.fromarray(canvas_no_ncc), use_container_width=False)
-#             time.sleep(target_time_no_ncc / num_blocks)
-#             y_pos_no_ncc = y_end_no_ncc
-#             if y_pos_no_ncc >= height and not no_ncc_finished:
-#                 no_ncc_time = time.time() - start_time
-#                 no_ncc_finished = True
-#                 st.write(f"NCC OFF completed in: {no_ncc_time:.3f} seconds")
-
-#         # --- NCC ON (Faster) ---
-#         if y_pos_ncc < height:
-#             y_end_ncc = min(y_pos_ncc + lines_per_update_ncc, height)
-#             canvas_ncc[y_pos_ncc:y_end_ncc, :] = image_np[y_pos_ncc:y_end_ncc, :]
-#             placeholder_ncc.image(Image.fromarray(canvas_ncc), use_container_width=False)
-#             elapsed_ncc = time.time() - last_time_ncc
-#             to_sleep_ncc = (target_time_ncc / num_blocks) - elapsed_ncc
-#             if to_sleep_ncc > 0:
-#                 time.sleep(to_sleep_ncc)
-#             last_time_ncc = time.time()
-#             y_pos_ncc = y_end_ncc
-#             if y_pos_ncc >= height and not ncc_finished:
-#                 ncc_time = time.time() - start_time
-#                 ncc_finished = True
-
-#                 st.write(f"NCC ON completed in: {ncc_time:.3f} seconds")
-
 # link: http://localhost:8501 or http://[hostIP]:8501
 import streamlit as st
 import numpy as np
@@ -101,16 +11,14 @@ from streamlit_receive import start_ble_listener
 
 st.set_page_config(page_title="Block Image Send Simulator", layout="wide")
 
-uploaded_file = r"/Users/taaaaryu/Desktop/研究室/OpenCampus/test.jpg"
+uploaded_file = r"C:\Users\hasegawa-lab\Desktop\OpenCampas\picture\photo_send.jpg"
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
 
-
-    st.title("yokonarabi")
-    site_labels = ["NCCなし", "フランクフルト", "ムンバイ", "ソウル", "NCC3台"]
-    if "selected" not in st.session_state:
-        st.session_state.selected = None
+    # site_labels = ["NCCなし", "フランクフルト", "ムンバイ", "ソウル", "NCC3台"]
+    # if "selected" not in st.session_state:
+    #     st.session_state.selected = None
 
     # BLE event queue and background thread starter
     if "ble_queue" not in st.session_state:
@@ -122,8 +30,8 @@ if uploaded_file:
     if "target_time" not in st.session_state:
         st.session_state.target_time = 0.5
 
-    site_cols = st.columns(len(site_labels))
-    site = st.columns(5)
+    # site_cols = st.columns(len(site_labels))
+    # site = st.columns(5)
 
     max_height = 800
     scale_ratio = min(max_height / image.height, 1.0)
@@ -132,15 +40,61 @@ if uploaded_file:
     image_resized = image.resize((new_width, new_height))
     image_np = np.array(image_resized)
 
-    st.image(image_resized, caption="Original Resized Image", use_container_width=True)
+    # st.image(image_resized, caption="Original Resized Image", use_container_width=True)
 
+
+    # ---
+    # バイトデータとして画像をエンコード
+    import io
+    import base64
+
+    buf = io.BytesIO()
+    image_resized.save(buf, format="PNG")
+    byte_im = buf.getvalue()
+    base64_image = base64.b64encode(byte_im).decode()
+
+    # HTMLで画像を右上に表示（小さめに）
+    # st.markdown(
+    #     f"""
+    #     <div style="position: fixed; top: 10px; right: 10px; z-index: 9999; border: 2px solid #ccc; border-radius: 8px; padding: 4px; background-color: white;">
+    #         <img src="data:image/png;base64,{base64_image}" width="150" />
+    #         <div style="text-align:center; font-size:12px;">Original</div>
+    #     </div>
+    #     """,
+    #     unsafe_allow_html=True
+    # )
+
+    st.markdown(
+    f"""
+    <div style="
+        position: fixed;
+        bottom: 50px;
+        left: 300px;
+        z-index: 9999;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        padding: 6px;
+        background-color: white;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        text-align: center;
+    ">
+        <img src="data:image/png;base64,{base64_image}" width="300" />
+        <div style="font-size:14px; margin-top:4px;">Original</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+    )
+
+
+
+    # ---
     # Controls: presets for exhibition scenarios (latency in ms)
     presets = {
-        "NCCなし": 269.546,
-        "Paris": 273.838,
-        "Mumbai": 151.748,
-        "Seoul": 244.0,
-        "NCC3台": 128.0,
+        "NCCなし": 2695.46,
+        "Paris": 2738.38,
+        "Mumbai": 15170.48,
+        "Seoul": 2440,
+        "NCC3台": 1280,
     }
 
     if "preset" not in st.session_state:
@@ -148,12 +102,22 @@ if uploaded_file:
         st.session_state.preset_ms = None
 
     with st.sidebar:
-        st.header("Preset (選択してからBLE通知を送ってください)")
+        st.header("Preset")
         for name, ms in presets.items():
             if st.button(f"{name} ({ms} ms)"):
                 st.session_state.preset = name
                 st.session_state.preset_ms = ms
-        st.write("Selected:", st.session_state.preset)
+        # 
+        st.markdown(
+        f"""
+        <div style="font-size:18px; font-weight:bold; color:#6088C6;">
+            Selected
+        </div>
+        <div style="font-size:35px; font-weight:bold; color:black;">
+            {st.session_state.preset}
+        </div>
+        """,
+        unsafe_allow_html=True)
 
     # Start BLE listener thread once. Capture the queue locally to avoid
     # accessing st.session_state from another thread.
@@ -169,9 +133,15 @@ if uploaded_file:
 
     height, width, _ = image_np.shape
 
+
+    caption_placeholder = st.empty()
+    caption_placeholder.markdown(
+    "<div style='text-align: center; font-size: 50px; font-weight: bold;'>受信した画像</div>",
+    unsafe_allow_html=True)
+    
     # single main placeholder for image display
     main_placeholder = st.empty()
-    main_placeholder.image(image_resized, caption="Original Resized Image", use_column_width=True)
+    main_placeholder.image(image_resized, caption="受信した画像", use_column_width=True)
 
     lines_per_block = 10
     num_blocks = (height + lines_per_block - 1) // lines_per_block
@@ -200,4 +170,3 @@ if uploaded_file:
 
         # small sleep to avoid busy loop
         time.sleep(0.1)
-

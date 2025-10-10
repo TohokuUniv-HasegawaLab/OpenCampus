@@ -5,6 +5,7 @@ from bleak import BleakScanner, BleakClient
 
 SERVICE_UUID = "e44b9ddb-630f-9052-9f2c-1b764b52ce72"
 CHAR_UUID    = "ebe9db63-5705-8280-37d5-808d4f5a35fb"
+
 TARGET_NAME  = "IPAD_SYNC"
 
 STREAMLIT_PATH = r"C:\Users\hasegawa-lab\Desktop\OpenCampas\webinterface.py"
