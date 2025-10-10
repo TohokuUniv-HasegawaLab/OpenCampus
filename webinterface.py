@@ -101,7 +101,7 @@ from streamlit_receive import start_ble_listener
 
 st.set_page_config(page_title="Block Image Send Simulator", layout="wide")
 
-uploaded_file = r"C:\Users\hasegawa-lab\Desktop\OpenCampas\picture\photo_send.jpg"
+uploaded_file = r"/Users/taaaaryu/Desktop/研究室/OpenCampus/test.jpg"
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
@@ -132,119 +132,72 @@ if uploaded_file:
     image_resized = image.resize((new_width, new_height))
     image_np = np.array(image_resized)
 
-    st.image(image_resized, caption="Original Resized Image", use_container_width=False)
+    st.image(image_resized, caption="Original Resized Image", use_container_width=True)
 
-    # Controls: presets for target_time
+    # Controls: presets for exhibition scenarios (latency in ms)
+    presets = {
+        "NCCなし": 269.546,
+        "Paris": 273.838,
+        "Mumbai": 151.748,
+        "Seoul": 244.0,
+        "NCC3台": 128.0,
+    }
+
+    if "preset" not in st.session_state:
+        st.session_state.preset = None
+        st.session_state.preset_ms = None
+
     with st.sidebar:
-        st.header("Preset target_time")
-        if st.button("Short (0.5s)"):
-            st.session_state.target_time = 0.5
-        if st.button("Medium (1.5s)"):
-            st.session_state.target_time = 1.5
-        if st.button("Long (3.0s)"):
-            st.session_state.target_time = 3.0
-        st.write("Current target_time:", st.session_state.target_time)
+        st.header("Preset (選択してからBLE通知を送ってください)")
+        for name, ms in presets.items():
+            if st.button(f"{name} ({ms} ms)"):
+                st.session_state.preset = name
+                st.session_state.preset_ms = ms
+        st.write("Selected:", st.session_state.preset)
 
-    # Start BLE listener thread once
+    # Start BLE listener thread once. Capture the queue locally to avoid
+    # accessing st.session_state from another thread.
     if not st.session_state.ble_thread_started:
-        def _ble_thread():
-            start_ble_listener(st.session_state.ble_queue)
+        ble_q = st.session_state.ble_queue
+
+        def _ble_thread(q=ble_q):
+            start_ble_listener(q)
 
         t = threading.Thread(target=_ble_thread, daemon=True)
         t.start()
         st.session_state.ble_thread_started = True
 
     height, width, _ = image_np.shape
-    col1, col2 = st.columns(2)
-    canvas_no_ncc = np.zeros_like(image_np)
-    canvas_ncc = np.zeros_like(image_np)
 
-    placeholder_no_ncc = col1.empty()
-    placeholder_ncc = col2.empty()
-    notify_placeholder = st.empty()
-
-    col1.subheader("NCC OFF")
-    col2.subheader("NCC ON")
+    # single main placeholder for image display
+    main_placeholder = st.empty()
+    main_placeholder.image(image_resized, caption="Original Resized Image", use_column_width=True)
 
     lines_per_block = 10
     num_blocks = (height + lines_per_block - 1) // lines_per_block
 
-    # Change the expected send time here
-    target_time_ncc = 0.5
-    # default for the slower (no NCC) path
-    target_time_no_ncc = 10.0
-
-    # avoid division by zero
-    try:
-        speed_ratio = max(1, int(target_time_no_ncc / target_time_ncc))
-    except Exception:
-        speed_ratio = 1
-    lines_per_update_ncc = lines_per_block * speed_ratio
-    lines_per_update_no_ncc = lines_per_block
-
-    #if st.button("Send Image (Compare NCC)"):
-    time.sleep(2)
-
-    start_time = time.time()
-    last_time_no_ncc = start_time
-    last_time_ncc = start_time
-    
-    y_pos_ncc = 0
-    y_pos_no_ncc = 0
-    ncc_finished = False
-    no_ncc_finished = False
-
-    # Main animation loop for demo; also poll BLE queue for notify events
-    # We will run the image rendering loop but also check for BLE events
-    while y_pos_ncc < height or y_pos_no_ncc < height:
-        current_time = time.time()
-
-        # Check BLE queue non-blocking
+    # Wait indefinitely and react to BLE notify events. On notify (0x01),
+    # progressively reveal the image based on the selected preset (ms).
+    while True:
         try:
-            evt = st.session_state.ble_queue.get_nowait()
+            evt = st.session_state.ble_queue.get(timeout=0.5)
         except Exception:
             evt = None
-        if evt and evt.get("type") == "notify":
-            # Show temporary display for the configured duration
-            duration = float(st.session_state.target_time)
-            with notify_placeholder.container():
-                st.write("BLE Notify received at", time.strftime('%H:%M:%S', time.localtime(evt.get('timestamp', time.time()))))
-                st.write(f"Temporary display for {duration} s")
-                st.progress(0)
-                # simple progress animation
-                steps = 20
-                for i in range(steps):
-                    st.progress((i + 1) / steps)
-                    time.sleep(duration / steps)
-            # clear placeholder
-            notify_placeholder.empty()
 
-        # --- NCC OFF (Slower) ---
-        if y_pos_no_ncc < height:
-            y_end_no_ncc = min(y_pos_no_ncc + lines_per_update_no_ncc, height)
-            canvas_no_ncc[y_pos_no_ncc:y_end_no_ncc, :] = image_np[y_pos_no_ncc:y_end_no_ncc, :]
-            placeholder_no_ncc.image(Image.fromarray(canvas_no_ncc), use_container_width=False)
-            time.sleep(target_time_no_ncc / num_blocks)
-            y_pos_no_ncc = y_end_no_ncc
-            if y_pos_no_ncc >= height and not no_ncc_finished:
-                no_ncc_time = time.time() - start_time
-                no_ncc_finished = True
-                st.write(f"NCC OFF completed in: {no_ncc_time:.3f} seconds")
+        if evt and evt.get("type") == "notify" and evt.get("data") == b"\x01" and st.session_state.preset is not None:
+            duration = float(st.session_state.preset_ms) / 1000.0
+            # prepare blank canvas
+            canvas = np.zeros_like(image_np)
+            sleep_per_block = duration / max(1, num_blocks)
+            main_placeholder.image(Image.fromarray(canvas), use_column_width=True)
+            for y in range(0, height, lines_per_block):
+                y_end = min(y + lines_per_block, height)
+                canvas[y:y_end, :] = image_np[y:y_end, :]
+                main_placeholder.image(Image.fromarray(canvas), use_column_width=True)
+                time.sleep(sleep_per_block)
+            # ensure full image shown at end
+            main_placeholder.image(image_resized, use_column_width=True)
 
-        # --- NCC ON (Faster) ---
-        if y_pos_ncc < height:
-            y_end_ncc = min(y_pos_ncc + lines_per_update_ncc, height)
-            canvas_ncc[y_pos_ncc:y_end_ncc, :] = image_np[y_pos_ncc:y_end_ncc, :]
-            placeholder_ncc.image(Image.fromarray(canvas_ncc), use_container_width=False)
-            elapsed_ncc = time.time() - last_time_ncc
-            to_sleep_ncc = (target_time_ncc / num_blocks) - elapsed_ncc
-            if to_sleep_ncc > 0:
-                time.sleep(to_sleep_ncc)
-            last_time_ncc = time.time()
-            y_pos_ncc = y_end_ncc
-            if y_pos_ncc >= height and not ncc_finished:
-                ncc_time = time.time() - start_time
-                ncc_finished = True
-
-                st.write(f"NCC ON completed in: {ncc_time:.3f} seconds")
+        # small sleep to avoid busy loop
+        time.sleep(0.1)
 
